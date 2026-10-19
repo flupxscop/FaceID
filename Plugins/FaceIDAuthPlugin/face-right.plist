@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Authorization right "com.example.faceid.face": succeeds only when FaceIDAuthPlugin:face
+  reports a face match. Written by Scripts/install.sh, removed by Scripts/uninstall.sh.
+  VM ONLY until docs/plugin-vm-test.md has passed.
+-->
+<plist version="1.0">
+<dict>
+    <key>class</key>
+    <string>evaluate-mechanisms</string>
+    <key>comment</key>
+    <string>FaceID: unlock by face (FaceIDAuthPlugin). Used only as the first option of system.login.screensaver.</string>
+    <key>mechanisms</key>
+    <array>
+        <string>FaceIDAuthPlugin:face</string>
+    </array>
+    <key>shared</key>
+    <false/>
+    <key>tries</key>
+    <integer>1</integer>
+    <key>version</key>
+    <integer>1</integer>
+</dict>
+</plist>

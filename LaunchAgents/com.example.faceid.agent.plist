@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.faceid.agent</string>
+    <!-- Started inside a sandbox that denies all network access (see agent.sb). -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/sandbox-exec</string>
+        <string>-f</string>
+        <string>/Library/Application Support/FaceID/agent.sb</string>
+        <string>/Library/Application Support/FaceID/FaceIDAgent</string>
+    </array>
+    <key>MachServices</key>
+    <dict>
+        <key>com.example.faceid.agent</key>
+        <true/>
+    </dict>
+    <!-- Runs in the logged-in user's GUI session, where camera access has been granted. -->
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+    <!-- Start at login so the model is loaded before the first unlock. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>

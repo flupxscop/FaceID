@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.faceid.broker</string>
+    <!-- Started inside a sandbox that denies all network access (see broker.sb). -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/sandbox-exec</string>
+        <string>-f</string>
+        <string>/Library/Application Support/FaceID/broker.sb</string>
+        <string>/Library/Application Support/FaceID/FaceIDBroker</string>
+    </array>
+    <!-- System-wide services: visible to the lock screen's plugin host (_securityagent)
+         and to every user's agent. -->
+    <key>MachServices</key>
+    <dict>
+        <key>com.example.faceid.broker.agent</key>
+        <true/>
+        <key>com.example.faceid.broker.auth</key>
+        <true/>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>

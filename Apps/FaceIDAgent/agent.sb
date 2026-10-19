@@ -1,0 +1,8 @@
+;; Sandbox profile for FaceIDAgent, applied by launchd via /usr/bin/sandbox-exec.
+;; Installed root-owned at /Library/Application Support/FaceID/agent.sb.
+;;
+;; Goal: biometric data can never leave the machine over the network.
+;; XPC, the camera, Vision and Core ML use Mach IPC and keep working.
+(version 1)
+(allow default)
+(deny network*)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sign the agent with the hardened runtime (codesign option "runtime") and this file
+  as its entitlements. See docs/security.md for the exact command.
+  Intentionally absent: get-task-allow (debugger attach), disable-library-validation,
+  allow-dyld-environment-variables, allow-unsigned-executable-memory, any network entitlement.
+-->
+<plist version="1.0">
+<dict>
+    <!-- Hardened runtime blocks the camera unless this is present. -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+</dict>
+</plist>

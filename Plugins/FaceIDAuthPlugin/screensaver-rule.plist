@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Replacement for "system.login.screensaver": face OR password.
+  k-of-n = 1 tries the face right first; if it does not allow, the password rule runs.
+  Same shape as Apple's own rules, e.g. com.apple.DiskManagement.root. = ["is-root", "authenticate-admin"].
+  The macOS default is "use-login-window-ui"; Apple's comment on it says to use
+  "authenticate-session-owner-or-admin" to enable SecurityAgent, which is our password option.
+  Written by Scripts/install.sh; Scripts/uninstall.sh restores the backed-up original.
+  VM ONLY until docs/plugin-vm-test.md has passed.
+-->
+<plist version="1.0">
+<dict>
+    <key>class</key>
+    <string>rule</string>
+    <key>comment</key>
+    <string>FaceID: unlock the screensaver by face (FaceIDAuthPlugin) or with the owner/admin password. Installed by FaceID; restore with uninstall.sh.</string>
+    <key>k-of-n</key>
+    <integer>1</integer>
+    <key>rule</key>
+    <array>
+        <string>com.example.faceid.face</string>
+        <string>authenticate-session-owner-or-admin</string>
+    </array>
+    <key>version</key>
+    <integer>1</integer>
+</dict>
+</plist>

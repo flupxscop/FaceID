@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+dist/
+dist-experiment/
+.venv-model/
+*.onnx

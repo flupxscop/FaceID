@@ -1,0 +1,8 @@
+;; Sandbox profile for FaceIDBroker (root LaunchDaemon), applied by launchd via /usr/bin/sandbox-exec.
+;; Installed root-owned at /Library/Application Support/FaceID/broker.sb.
+;;
+;; The broker only relays scan requests and result codes, but it runs as root: keep it offline.
+;; XPC uses Mach IPC and keeps working.
+(version 1)
+(allow default)
+(deny network*)
