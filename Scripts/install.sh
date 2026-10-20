@@ -107,6 +107,13 @@ require_signed "$DIST/FaceIDBroker" "com.example.faceid.broker"
 # The broker is ad-hoc by design and verified everywhere by its code hash (see build-app.sh).
 [[ "$(codesign -dv "$DIST/FaceIDBroker" 2>&1)" == *"Signature=adhoc"* ]] \
     || die "the broker must be ad-hoc signed — rebuild with Scripts/build-app.sh"
+# Debug agents contain the VM-only forced-match test mode (docs/plugin-vm-test.md E6): VM only, always.
+readonly FORCED_MATCH_MARKER="FACEID-FORCED-MATCH-VM-TEST"
+if grep -aq "$FORCED_MATCH_MARKER" "$DIST/FaceIDAgent"; then
+    [[ "$(sysctl -n kern.hv_vmm_present 2>/dev/null || echo 0)" == "1" ]] \
+        || die "this is a debug build with the VM-only test mode — install a release build on a real Mac"
+    warn "debug build: the forced-match test mode is available (off unless $SUPPORT/force-match-vm-test exists)"
+fi
 broker_cdhash="$(code_hash "$DIST/FaceIDBroker")"
 [[ "$broker_cdhash" =~ ^[0-9A-F]{40}$ ]] || die "cannot read the broker's code hash"
 

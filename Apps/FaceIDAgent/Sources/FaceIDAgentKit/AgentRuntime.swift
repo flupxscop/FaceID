@@ -40,8 +40,14 @@ public final class AgentRuntime {
                 // One camera and one detector shared by scan and enrollment; the coordinator serializes them.
                 let camera = CameraService()
                 let detector = FaceDetector()
+                var authenticator: any FaceAuthenticating =
+                    FaceAuthenticator(camera: camera, analyzer: detector, embedder: model, store: store)
+                #if DEBUG
+                // VM-only lock-screen test (docs/plugin-vm-test.md E6); never compiled into release builds.
+                authenticator = ForcedMatchTestAuthenticator(wrapped: authenticator, isActive: { ForcedMatchTestMode.isActive() })
+                #endif
                 return FaceServices(
-                    authenticator: FaceAuthenticator(camera: camera, analyzer: detector, embedder: model, store: store),
+                    authenticator: authenticator,
                     enroller: FaceEnroller(
                         camera: camera, analyzer: detector, embedder: model, store: store,
                         ownerVerifier: LocalAuthenticationOwnerVerifier()

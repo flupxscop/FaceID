@@ -33,8 +33,39 @@ BUILD_CONFIGURATION=debug Scripts/build-app.sh
 Scripts/test-plugin.sh
 ```
 
-> 📷 กล้องใน VM: Parallels แชร์กล้องของเครื่องจริงให้ VM ได้ ส่วน UTM (Apple Virtualization)
-> อาจไม่มีกล้อง ถ้าไม่มีกล้องจะทดสอบได้เฉพาะทาง "ไม่ผ่าน → รหัสผ่าน" (E1–E5, F1–F4) ข้อ E6 กับ S1–S3 ต้องมีกล้อง
+> 📷 กล้องใน VM: VM ที่เป็น macOS บน Mac ชิป Apple (ทั้ง UTM และ Parallels) **ไม่มีกล้อง** — Virtualization framework
+> ไม่รองรับการส่งกล้อง/USB เข้า guest (ยืนยันแล้ว 2026-10-20 บน Parallels 27) ข้อ S1–S3 จึงทดสอบบนเครื่องหลักแทน
+> ส่วน E6 ใช้ "โหมดบังคับ match" ด้านล่าง
+
+### โหมดบังคับ match (สำหรับ E6 เท่านั้น)
+
+E6 ทดสอบว่า**เมื่อ plugin ได้ `Allow` แล้วหน้าจอปลดล็อกจริง** ไม่ได้ทดสอบกล้อง โหมดนี้ทำให้ agent ตอบ `match`
+โดยไม่สแกน และจะทำงานก็ต่อเมื่อครบ**ทั้งสามข้อ**:
+
+1. เป็น **debug build** (`ForcedMatchTestMode.swift` อยู่ใน `#if DEBUG`; `build-app.sh` ไม่ยอม build release ที่มีโค้ดนี้)
+2. รันอยู่ใน **VM** (`kern.hv_vmm_present` = 1; `install.sh` ไม่ยอมติดตั้ง debug build นอก VM แม้ใส่ `--allow-host`)
+3. มีไฟล์ `/Library/Application Support/FaceID/force-match-vm-test` ที่ **root เป็นเจ้าของ** และคนอื่นเขียนไม่ได้
+
+agent เช็กทั้งสามข้อใหม่ทุกครั้งที่สแกน และ log ระดับ fault `FACEID-FORCED-MATCH-VM-TEST` ทุกครั้งที่ตอบ match แบบนี้
+สวิตช์ "ใช้ใบหน้าปลดล็อก" ยังมีผลเหมือนเดิม — ปิดอยู่ = ไม่ match
+
+เปิด (ใน VM เท่านั้น):
+
+```bash
+sudo install -o root -g wheel -m 644 /dev/null "/Library/Application Support/FaceID/force-match-vm-test"
+```
+
+VM ไม่มีกล้องจึงลงทะเบียนใบหน้าไม่ได้ และแอปจะไม่ให้เปิดสวิตช์ ให้เปิดสวิตช์ด้วยคำสั่งนี้แทน (บัญชีผู้ใช้ใน VM ไม่ต้อง sudo):
+
+```bash
+defaults write com.example.faceid enabled -bool true
+```
+
+ปิดหลังทดสอบเสร็จ (`uninstall.sh` ก็ลบไฟล์นี้ให้ด้วย):
+
+```bash
+sudo rm "/Library/Application Support/FaceID/force-match-vm-test"
+```
 
 ## สิ่งที่พบระหว่างทดสอบ (2026-10-18)
 
@@ -91,7 +122,8 @@ security authorizationdb read com.example.faceid.face
 | E3b | (ผ่าน broker) ล็อกหน้าจอ | log ของ broker: `accepted plugin connection ... audit session N` และ `agent registered for audit session N` **เลข N ตรงกัน**; plugin: `face mechanism finished: no match` | ✅ 2026-10-18: session 100183 ทั้งสองฝั่ง, ไม่มี 4102, plugin ได้คำตอบจาก agent (`no match` เพราะยังปิดฟีเจอร์) |
 | E3 | หน้าตรงกล้อง | log `face mechanism finished: match` (ไม่ใช่ `xpc error`) | ❌ `xpc error 4099` และ agent ไม่เห็นการเชื่อมต่อ: helper รันเป็น `_securityagent` มองไม่เห็น Mach service ใน `gui/<uid>` |
 | E4/E5 | ปิด "ใช้ใบหน้าปลดล็อก" แล้วล็อกหน้าจอ | ช่องรหัสผ่านขึ้นทันที และรหัสผ่านใช้ได้ | ✅ plugin ตอบ `Deny` → ขึ้นช่องรหัสผ่าน และปลดล็อกได้ |
-| E6 | หน้าตรงกล้อง กะพริบตา หันตามที่ระบบสุ่ม | ปลดล็อกภายใน ~2 วินาที | ⏳ VM (UTM) ไม่มีกล้อง; บนเครื่องหลักการสแกน (ไม่ผ่านหน้าล็อก) จำหน้าได้ ✅ |
+| E6 | เปิด**โหมดบังคับ match** (ด้านบน) แล้วล็อกหน้าจอ | ปลดล็อกได้เองโดยไม่ต้องใส่รหัสผ่าน; log มี `FACEID-FORCED-MATCH-VM-TEST` และ `face mechanism finished: match` | ⏳ VM ไม่มีกล้อง จึงใช้โหมดบังคับ match; บนเครื่องหลักการสแกน (ไม่ผ่านหน้าล็อก) จำหน้าได้ ✅ |
+| E6b | ลบไฟล์เปิดโหมดแล้วล็อกหน้าจอ | ขึ้นช่องรหัสผ่าน (กลับไปสแกนจริง → ไม่มีกล้อง → Deny) | |
 | F1 | ปิดกล้อง/หันหนี | ภายใน 7 วินาที ช่องรหัสผ่านขึ้น | |
 | F2 | `launchctl bootout gui/$(id -u)/com.example.faceid.agent` แล้วล็อก | ช่องรหัสผ่านขึ้นทันที | |
 | F3 | สแกนไม่ผ่าน 3 ครั้ง | ครั้งที่ 4 ไปรหัสผ่านทันที; หลังใช้รหัสผ่านแล้ว ใบหน้าใช้ได้อีก | |

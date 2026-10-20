@@ -59,6 +59,17 @@ codesign --force --sign "$IDENTITY" --options runtime --timestamp=none \
 
 codesign --verify --strict "$DIST/FaceIDAgent"
 codesign --verify --strict "$DIST/FaceIDBroker"
+
+# The VM-only forced-match test mode (ForcedMatchTestMode.swift) must never ship in a release build.
+FORCED_MATCH_MARKER="FACEID-FORCED-MATCH-VM-TEST"
+if grep -aq "$FORCED_MATCH_MARKER" "$DIST/FaceIDAgent"; then
+    if [[ "$CONFIGURATION" == "release" ]]; then
+        rm -rf "$DIST"
+        echo "error: release agent contains the forced-match test mode — refusing" >&2
+        exit 1
+    fi
+    echo "note: debug agent contains the VM-only forced-match test mode (off unless enabled in a VM)"
+fi
 codesign --verify --strict --deep "$DIST/FaceID.app"
 
 # The face embedding model, if it has been converted (see Models/README.md).

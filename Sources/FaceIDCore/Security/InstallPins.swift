@@ -41,7 +41,7 @@ public struct InstallPins: Sendable, Equatable {
     }
 
     /// Owned by root, not a symlink, and not writable by group or others.
-    static func isRootProtected(_ url: URL) -> Bool {
+    public static func isRootProtected(_ url: URL) -> Bool {
         var info = stat()
         guard lstat(url.path, &info) == 0 else { return false }
         let isRegularFile = (info.st_mode & S_IFMT) == S_IFREG
