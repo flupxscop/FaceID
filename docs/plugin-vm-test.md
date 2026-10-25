@@ -80,6 +80,7 @@ sudo rm "/Library/Application Support/FaceID/force-match-vm-test"
 - plugin ตรวจลายเซ็น broker ไม่ผ่าน (4102) ทั้งแบบใบรับรองและ cdhash: `SecStaticCodeCheckValidity` = `CSSMERR_TP_NOT_TRUSTED`
   แม้ตั้งให้ VM เชื่อถือใบรับรองแล้ว → broker แบบ ad-hoc + cdhash ผ่าน (ทดลองแล้ว: `finished: no match`, ไม่มี 4102)
 - (2026-10-25) ภาพพักหน้าจอมี grace period 5 นาที (`lock screen immediate == NO ... delay of: 300`) ปลดล็อกภายใน 5 นาทีจะไม่ผ่านกฎ — ทดสอบด้วย ⌃⌘Q หรือรอเกิน 5 นาที
+- (2026-10-25) สั่งจากเครื่องหลักได้: `prlctl exec macOS` (root ผ่าน Parallels Tools), ⌃⌘Q = `prlctl send-key-event macOS --key` 115 (⌘) + 37 (⌃) + 24 (Q), Return = 36, ภาพหน้าจอ `prlctl capture`
 - (2026-10-25) หลังปลดล็อกโดยไม่ใช้รหัสผ่าน macOS อาจขอรหัสผ่านบัญชี Apple ใน การตั้งค่าระบบ
 - notification `com.apple.screenIsUnlocked` มาถึงก่อนที่ window server จะอัปเดตสถานะ → agent เช็กซ้ำได้นานสุด 3 วินาทีแล้ว
 
@@ -125,7 +126,7 @@ security authorizationdb read com.example.faceid.face
 | E3 | หน้าตรงกล้อง | log `face mechanism finished: match` (ไม่ใช่ `xpc error`) | ❌ `xpc error 4099` และ agent ไม่เห็นการเชื่อมต่อ: helper รันเป็น `_securityagent` มองไม่เห็น Mach service ใน `gui/<uid>` |
 | E4/E5 | ปิด "ใช้ใบหน้าปลดล็อก" แล้วล็อกหน้าจอ | ช่องรหัสผ่านขึ้นทันที และรหัสผ่านใช้ได้ | ✅ plugin ตอบ `Deny` → ขึ้นช่องรหัสผ่าน และปลดล็อกได้ |
 | E6 | เปิด**โหมดบังคับ match** (ด้านบน) แล้วล็อกหน้าจอ | ปลดล็อกได้เองโดยไม่ต้องใส่รหัสผ่าน; log มี `FACEID-FORCED-MATCH-VM-TEST` และ `face mechanism finished: match` | ✅ 2026-10-25 macOS 27.0.1 (Parallels 27): ปลดล็อกโดยไม่ใส่รหัสผ่าน — log: `FACEID-FORCED-MATCH-VM-TEST` → `face mechanism finished: match` ไม่ต้องตั้ง context เพิ่ม ⚠️ กฎทำงานเมื่อ**กด Return** ที่หน้าล็อก (ช่องรหัสผ่านว่างได้) ไม่ใช่ตอนปลุกจอ |
-| E6b | ลบไฟล์เปิดโหมดแล้วล็อกหน้าจอ | ขึ้นช่องรหัสผ่าน (กลับไปสแกนจริง → ไม่มีกล้อง → Deny) | |
+| E6b | ลบไฟล์เปิดโหมดแล้วล็อกหน้าจอ | ขึ้นช่องรหัสผ่าน (กลับไปสแกนจริง → ไม่มีกล้อง → Deny) | ✅ 2026-10-25: Return ช่องว่าง → `face mechanism finished: no match` → `builtin:authenticate` → `Evaluate denied` (ยังล็อกอยู่); ใส่รหัสผ่านจริง → `Succeeded authorizing right 'system.login.screensaver'` |
 | F1 | ปิดกล้อง/หันหนี | ภายใน 7 วินาที ช่องรหัสผ่านขึ้น | |
 | F2 | `launchctl bootout gui/$(id -u)/com.example.faceid.agent` แล้วล็อก | ช่องรหัสผ่านขึ้นทันที | |
 | F3 | สแกนไม่ผ่าน 3 ครั้ง | ครั้งที่ 4 ไปรหัสผ่านทันที; หลังใช้รหัสผ่านแล้ว ใบหน้าใช้ได้อีก | |
