@@ -84,6 +84,17 @@ sudo rm "/Library/Application Support/FaceID/force-match-vm-test"
 - (2026-10-25) หลังปลดล็อกโดยไม่ใช้รหัสผ่าน macOS อาจขอรหัสผ่านบัญชี Apple ใน การตั้งค่าระบบ
 - notification `com.apple.screenIsUnlocked` มาถึงก่อนที่ window server จะอัปเดตสถานะ → agent เช็กซ้ำได้นานสุด 3 วินาทีแล้ว
 
+## ⛔ ปัญหาความปลอดภัยที่พบ (2026-10-25): plugin หาย = ปลดล็อกได้โดยไม่ต้องใส่รหัสผ่าน
+
+ทดสอบ R3 (ย้าย `FaceIDAuthPlugin.bundle` ออกโดยไม่คืนค่ากฎ) แล้วล็อกหน้าจอ กด Return ช่องรหัสผ่านว่าง → **ปลดล็อก**
+log ของ SecurityAgent: `Plugin FaceIDAuthPlugin filepath not found` → `AgentMechanism invoked [builtin:no-op]` →
+authd `Succeeded authorizing right 'system.login.screensaver'`
+
+macOS แทน mechanism ที่หา plugin ไม่เจอด้วย `builtin:no-op` (สำเร็จเสมอ) right `com.example.faceid.face` เป็น
+`evaluate-mechanisms` ที่มี mechanism เดียว จึงผ่าน และเพราะกฎเป็น k-of-n = 1 หน้าจอจึงปลดล็อก
+**ขัดกับ CLAUDE.md §7 ข้อ 6 (fail closed)** — ต้องแก้แบบของ right ก่อนใช้ plugin นอก VM
+(ผู้ที่ลบ bundle ได้ต้องเป็น root อยู่แล้ว แต่การถอนการติดตั้งไม่ครบ, เครื่องมือล้างเครื่อง หรือทำ recovery ข้อ 3 ไม่ครบ จะทำให้หน้าล็อกไม่ป้องกันอะไรเลย)
+
 ## ขั้นตอน
 
 เปิดหน้าต่างดู log ค้างไว้ (ผ่าน SSH ก็ได้):
@@ -128,9 +139,9 @@ security authorizationdb read com.example.faceid.face
 | E6 | เปิด**โหมดบังคับ match** (ด้านบน) แล้วล็อกหน้าจอ | ปลดล็อกได้เองโดยไม่ต้องใส่รหัสผ่าน; log มี `FACEID-FORCED-MATCH-VM-TEST` และ `face mechanism finished: match` | ✅ 2026-10-25 macOS 27.0.1 (Parallels 27): ปลดล็อกโดยไม่ใส่รหัสผ่าน — log: `FACEID-FORCED-MATCH-VM-TEST` → `face mechanism finished: match` ไม่ต้องตั้ง context เพิ่ม ⚠️ กฎทำงานเมื่อ**กด Return** ที่หน้าล็อก (ช่องรหัสผ่านว่างได้) ไม่ใช่ตอนปลุกจอ |
 | E6b | ลบไฟล์เปิดโหมดแล้วล็อกหน้าจอ | ขึ้นช่องรหัสผ่าน (กลับไปสแกนจริง → ไม่มีกล้อง → Deny) | ✅ 2026-10-25: Return ช่องว่าง → `face mechanism finished: no match` → `builtin:authenticate` → `Evaluate denied` (ยังล็อกอยู่); ใส่รหัสผ่านจริง → `Succeeded authorizing right 'system.login.screensaver'` |
 | F1 | ปิดกล้อง/หันหนี | ภายใน 7 วินาที ช่องรหัสผ่านขึ้น | |
-| F2 | `launchctl bootout gui/$(id -u)/com.example.faceid.agent` แล้วล็อก | ช่องรหัสผ่านขึ้นทันที | |
-| F3 | สแกนไม่ผ่าน 3 ครั้ง | ครั้งที่ 4 ไปรหัสผ่านทันที; หลังใช้รหัสผ่านแล้ว ใบหน้าใช้ได้อีก | |
-| F4 | ระหว่างสแกนกดยกเลิก/เริ่มพิมพ์รหัสผ่าน | ไฟกล้องดับ | |
+| F2 | `launchctl bootout gui/$(id -u)/com.example.faceid.agent` แล้วล็อก | ช่องรหัสผ่านขึ้นทันที | ✅ 2026-10-25: broker `no agent registered` → `no match` → รหัสผ่านว่างถูกปฏิเสธ, รหัสผ่านจริงปลดล็อกได้ |
+| F3 | สแกนไม่ผ่าน 3 ครั้ง | ครั้งที่ 4 ไปรหัสผ่านทันที; หลังใช้รหัสผ่านแล้ว ใบหน้าใช้ได้อีก | ⏭ ทำใน VM ไม่ได้ (ไม่มีกล้อง/ไม่ได้ลงทะเบียน → `notEnrolled` ไม่นับเป็นครั้งที่ล้มเหลว) ต้องทดสอบบนเครื่องหลัก |
+| F4 | ระหว่างสแกนกดยกเลิก/เริ่มพิมพ์รหัสผ่าน | ไฟกล้องดับ | ⏭ ทำใน VM ไม่ได้ (ไม่มีกล้อง) ต้องทดสอบบนเครื่องหลัก |
 | S1 | รูปถ่ายพิมพ์ | ไม่ผ่าน | |
 | S2 | รูปบนจอมือถือ | ไม่ผ่าน | ✅ 2026-10-18 (MacBook Air, ทดสอบสแกนจากแอป): ไม่ผ่านทั้งถือนิ่ง/หมุน และแบบกะพริบตาก่อนแล้วยกรูป (หลังแก้การผูก liveness กับหน้าที่ match) |
 | S3 | วิดีโอเจ้าของเครื่อง | ไม่ผ่าน (ถ้าทิศหันไม่ตรงที่สุ่ม) | |
