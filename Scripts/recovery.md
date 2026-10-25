@@ -157,10 +157,10 @@ security delete-generic-password -s com.example.faceid -a template-key.secure-en
 ทำหลังติดตั้งด้วย `--with-plugin` ใน VM แต่ละข้อเริ่มจาก snapshot ที่ติดตั้งแล้ว
 
 - [ ] `uninstall.sh --restore-authdb-only` ผ่าน SSH แล้วปลดล็อกด้วยรหัสผ่านได้
-- [ ] หยุด agent แล้วล็อกหน้าจอ → ปลดล็อกด้วยรหัสผ่านได้
-- [ ] ลบ plugin bundle ทิ้งโดยไม่คืนค่ากฎ → ภายใน ~5 วินาที broker คืนกฎเดิมเอง (log `restoring the original rule`) → ล็อกหน้าจอแล้วต้องถามรหัสผ่าน
-- [ ] ทำ binary ของ plugin เสีย (bundle ยังอยู่) → broker คืนกฎเดิมเองภายใน ~5 วินาที
-- [ ] ระหว่าง `install.sh --with-plugin` ซ้ำ broker ไม่คืนกฎกลางคัน (มี `state/maintenance`) และหลังติดตั้งกฎยังใช้ plugin
+- [x] หยุด agent แล้วล็อกหน้าจอ → ปลดล็อกด้วยรหัสผ่านได้
+- [x] ลบ plugin bundle ทิ้งโดยไม่คืนค่ากฎ → ภายใน ~5 วินาที broker คืนกฎเดิมเอง (log `restoring the original rule`) → ล็อกหน้าจอแล้วต้องถามรหัสผ่าน
+- [x] ทำ binary ของ plugin เสีย (bundle ยังอยู่) → broker คืนกฎเดิมเองภายใน ~5 วินาที
+- [x] ระหว่าง `install.sh --with-plugin` ซ้ำ broker ไม่คืนกฎกลางคัน (มี `state/maintenance`) และหลังติดตั้งกฎยังใช้ plugin
 - [ ] Recovery Mode: ลบ plugin + ย้าย `auth.db` → บูตแล้วล็อกอินได้ และกฎกลับเป็นค่าเริ่มต้น
 - [ ] หลัง `uninstall.sh` กฎ `system.login.screensaver` ตรงกับ `backup/original` ทุกตัวอักษร (ยกเว้นวันที่แก้ไข)
 - [ ] หลัง `uninstall.sh` ไม่มีไฟล์ใน `/Library/Application Support/FaceID` ยกเว้น `backup/` และไม่มีข้อมูลใบหน้าใน keychain

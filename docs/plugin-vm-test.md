@@ -84,7 +84,7 @@ sudo rm "/Library/Application Support/FaceID/force-match-vm-test"
 - (2026-10-25) หลังปลดล็อกโดยไม่ใช้รหัสผ่าน macOS อาจขอรหัสผ่านบัญชี Apple ใน การตั้งค่าระบบ
 - notification `com.apple.screenIsUnlocked` มาถึงก่อนที่ window server จะอัปเดตสถานะ → agent เช็กซ้ำได้นานสุด 3 วินาทีแล้ว
 
-## ⛔ ปัญหาความปลอดภัยที่พบ (2026-10-25): plugin หาย = ปลดล็อกได้โดยไม่ต้องใส่รหัสผ่าน
+## ✅ (แก้แล้ว) ปัญหาความปลอดภัยที่พบ (2026-10-25): plugin หาย = ปลดล็อกได้โดยไม่ต้องใส่รหัสผ่าน
 
 ทดสอบ R3 (ย้าย `FaceIDAuthPlugin.bundle` ออกโดยไม่คืนค่ากฎ) แล้วล็อกหน้าจอ กด Return ช่องรหัสผ่านว่าง → **ปลดล็อก**
 log ของ SecurityAgent: `Plugin FaceIDAuthPlugin filepath not found` → `AgentMechanism invoked [builtin:no-op]` →
@@ -92,7 +92,7 @@ authd `Succeeded authorizing right 'system.login.screensaver'`
 
 macOS แทน mechanism ที่หา plugin ไม่เจอด้วย `builtin:no-op` (สำเร็จเสมอ) right `com.example.faceid.face` เป็น
 `evaluate-mechanisms` ที่มี mechanism เดียว จึงผ่าน และเพราะกฎเป็น k-of-n = 1 หน้าจอจึงปลดล็อก
-**ขัดกับ CLAUDE.md §7 ข้อ 6 (fail closed)** — ต้องแก้แบบของ right ก่อนใช้ plugin นอก VM
+**ขัดกับ CLAUDE.md §7 ข้อ 6 (fail closed)**
 ลองแก้แล้ว (2026-10-25, ผ่าน install.sh ใน VM) — **ไม่มีแบบไหนแก้ได้**:
 
 | แบบที่ลอง | bundle หาย | binary เสีย |
@@ -102,7 +102,21 @@ macOS แทน mechanism ที่หา plugin ไม่เจอด้วย 
 | mechanism แบบ `,privileged` (authorizationhost) | ❌ ปลดล็อก (`filepath not found`) | ไม่ได้ลอง |
 
 สรุป: macOS ถือว่า mechanism ของ plugin ที่โหลดไม่ได้ = สำเร็จ (น่าจะเพื่อกันผู้ใช้ถูกล็อกออก) right ที่ตัดสินด้วย plugin
-อย่างเดียวจึง fail closed ไม่ได้เมื่อ plugin โหลดไม่ขึ้น ต้องแก้ด้วยวิธีอื่น (ยังไม่ได้ตัดสินใจ)
+อย่างเดียวจึง fail closed ไม่ได้เมื่อ plugin โหลดไม่ขึ้น
+
+**แก้แล้ว (2026-10-25, commit 05c2d9d):** broker เฝ้า plugin (`PluginWatchdog.swift`) ทุก 5 วินาทีและเมื่อโฟลเดอร์ plugin เปลี่ยน
+ถ้า bundle หาย ลายเซ็นเสีย หรือไม่มีสถาปัตยกรรมของเครื่อง ขณะที่กฎยังใช้ plugin → เรียก `uninstall.sh --restore-authdb-only`
+(CLAUDE.md §7 ข้อ 7) ผลใน VM (debug build, Parallels):
+
+| # | ทำอะไร | ผล |
+|---|---|---|
+| W1 | ย้าย bundle ออก | ✅ broker คืนกฎภายใน 0.2 วินาที (`restoring the original rule` → `original screen-unlock rule restored`) กฎเป็น `use-login-window-ui` และลบ right แล้ว; ล็อก + Return ช่องว่าง → ไม่เรียก plugin, `Evaluate denied`, ยังล็อกอยู่ |
+| W2 | เขียนทับ binary ของ plugin (bundle ยังอยู่) | ✅ broker คืนกฎภายใน 2 วินาที (จากตัวจับเวลา) |
+| W3 | `install.sh --with-plugin` ซ้ำขณะ broker ทำงาน | ✅ broker ไม่คืนกฎกลางคัน กฎยังใช้ plugin หลังติดตั้ง และไม่มีไฟล์ `state/maintenance` ค้าง |
+| E6 / E6b / F2 | ทำซ้ำบน build ใหม่ | ✅ เหมือนเดิม (match → ปลดล็อก; no match / ไม่มี agent → รหัสผ่าน, ช่องว่างถูกปฏิเสธ) |
+
+ข้อจำกัดที่เหลือ: ถ้า broker ไม่ทำงาน (เช่น ใน Recovery Mode หรือถูก root หยุด) จะไม่มีใครคืนกฎ — recovery.md ข้อ 3
+จึงให้ย้าย `auth.db` **ก่อน**ลบ plugin
 
 (ผู้ที่ลบ bundle ได้ต้องเป็น root อยู่แล้ว แต่การถอนการติดตั้งไม่ครบ, เครื่องมือล้างเครื่อง หรือทำ recovery ข้อ 3 ไม่ครบ จะทำให้หน้าล็อกไม่ป้องกันอะไรเลย)
 
