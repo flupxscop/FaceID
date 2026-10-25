@@ -170,8 +170,8 @@ security authorizationdb read com.example.faceid.face
 | S1 | รูปถ่ายพิมพ์ | ไม่ผ่าน | |
 | S2 | รูปบนจอมือถือ | ไม่ผ่าน | ✅ 2026-10-18 (MacBook Air, ทดสอบสแกนจากแอป): ไม่ผ่านทั้งถือนิ่ง/หมุน และแบบกะพริบตาก่อนแล้วยกรูป (หลังแก้การผูก liveness กับหน้าที่ match) |
 | S3 | วิดีโอเจ้าของเครื่อง | ไม่ผ่าน (ถ้าทิศหันไม่ตรงที่สุ่ม) | |
-| R1–R6 | รายการทดสอบการกู้คืนใน [Scripts/recovery.md](../Scripts/recovery.md) | ผ่านทุกข้อ | |
-| U1 | `sudo "/Library/Application Support/FaceID/uninstall.sh"` | กฎตรงกับ `backup/original` และไม่มี right `com.example.faceid.face` | |
+| R1–R6 | รายการทดสอบการกู้คืนใน [Scripts/recovery.md](../Scripts/recovery.md) | ผ่านทุกข้อ | 2026-10-25: R1 ✅ (`--restore-authdb-only` ผ่าน `prlctl exec` แทน SSH → กฎเป็น `use-login-window-ui`, ล็อกแล้วไม่เรียก plugin, รหัสผ่านว่างถูกปฏิเสธ), R2 ✅ (= F2), R3 ✅ (broker คืนกฎเอง ดูด้านบน), R5 ✅, R6 ⚠️ ไฟล์ ✅ แต่ keychain ตรวจใน VM ไม่ได้ (ไม่เคยลงทะเบียน และเพิ่มรายการทดสอบไม่ได้: `User interaction is not allowed`) ต้องตรวจบนเครื่องหลัก, R4 ⏳ |
+| U1 | `sudo "/Library/Application Support/FaceID/uninstall.sh"` | กฎตรงกับ `backup/original` และไม่มี right `com.example.faceid.face` | ✅ 2026-10-25: กฎตรงกับ `backup/original` ทุกตัวอักษร (ไม่นับ created/modified), ไม่มี right, เหลือแค่ `backup/`, ไม่มี plugin/LaunchAgent/LaunchDaemon/แอป, ไม่มี job หรือ process ค้าง |
 
 ตรวจ U1 (สองคำสั่งแรกต้องแสดงค่าเดียวกัน บน macOS 27 คือ `use-login-window-ui`):
 
