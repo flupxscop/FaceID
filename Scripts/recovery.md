@@ -74,30 +74,41 @@ sudo "/Library/Application Support/FaceID/uninstall.sh"
    - Apple silicon: ปิดเครื่อง → กดปุ่มเปิดเครื่องค้างจนขึ้น "กำลังโหลดตัวเลือกการเริ่มต้นระบบ" → ตัวเลือก
    - Intel: เปิดเครื่องแล้วกด ⌘R ค้าง
 2. ถ้าเปิด FileVault อยู่: Disk Utility → เลือก "Macintosh HD - Data" → Mount → ใส่รหัสผ่าน
-3. เมนู Utilities → Terminal แล้วดูชื่อ volume:
+3. เมนู Utilities → Terminal แล้วดูชื่อ volume (มักเป็น `Data` หรือ `Macintosh HD - Data`):
 
 ```bash
 ls /Volumes
 ```
 
-4. **ทำขั้นนี้ก่อน**: ให้ macOS สร้างฐานข้อมูลกฎ authorization ใหม่จากค่าเริ่มต้นตอนบูตครั้งถัดไป (เปลี่ยนชื่อ volume ให้ตรงกับที่เห็น):
+ตั้งตัวแปรเป็นชื่อนั้น (ใน Recovery วางข้อความจากที่อื่นไม่ได้ จึงย่อคำสั่งด้วยตัวแปร):
 
 ```bash
-mv "/Volumes/Macintosh HD - Data/private/var/db/auth.db" "/Volumes/Macintosh HD - Data/private/var/db/auth.db.faceid-broken"
+D="/Volumes/Data"
+```
+
+4. **ทำขั้นนี้ก่อน**: ให้ macOS สร้างฐานข้อมูลกฎ authorization ใหม่จากค่าเริ่มต้นตอนบูตครั้งถัดไป
+   ย้ายทั้ง `auth.db` และไฟล์ `-wal`/`-shm` ข้างกัน (ถ้าเหลือ `-wal` ไว้ อาจถูกนำกลับมาใช้กับฐานข้อมูลใหม่):
+
+```bash
+cd "$D/private/var/db"
+```
+
+```bash
+for f in auth.db auth.db-wal auth.db-shm; do mv $f $f.faceid-broken; done
 ```
 
 > ⚠️ ขั้นนี้รีเซ็ตกฎ authorization **ทุกข้อ** กลับเป็นค่าเริ่มต้น ถ้าเครื่องถูกจัดการด้วย MDM
 > หรือมีโปรแกรมอื่นแก้กฎไว้ จะต้องตั้งค่าของโปรแกรมนั้นใหม่
-> ⚠️ วิธีนี้ต้อง**ทดสอบใน VM ก่อน** (อยู่ในรายการทดสอบด้านล่าง)
+> ✅ ทดสอบใน VM แล้ว (2026-10-25, macOS 27.0.1): บูตแล้วล็อกอินได้ กฎกลับเป็นค่าเริ่มต้น
 
 5. แล้วค่อยลบ plugin และ LaunchAgent:
 
 ```bash
-rm -rf "/Volumes/Macintosh HD - Data/Library/Security/SecurityAgentPlugins/FaceIDAuthPlugin.bundle"
+rm -rf "$D/Library/Security/SecurityAgentPlugins/FaceIDAuthPlugin.bundle"
 ```
 
 ```bash
-rm -f "/Volumes/Macintosh HD - Data/Library/LaunchAgents/com.example.faceid.agent.plist"
+rm -f "$D/Library/LaunchAgents/com.example.faceid.agent.plist"
 ```
 
 > ⛔ **ห้ามลบ plugin โดยไม่คืนค่ากฎ** (ห้ามหยุดหลังขั้น 5 โดยไม่ได้ทำขั้น 4): macOS ถือว่า plugin ที่หายไป = ผ่าน
@@ -161,6 +172,6 @@ security delete-generic-password -s com.example.faceid -a template-key.secure-en
 - [x] ลบ plugin bundle ทิ้งโดยไม่คืนค่ากฎ → ภายใน ~5 วินาที broker คืนกฎเดิมเอง (log `restoring the original rule`) → ล็อกหน้าจอแล้วต้องถามรหัสผ่าน
 - [x] ทำ binary ของ plugin เสีย (bundle ยังอยู่) → broker คืนกฎเดิมเองภายใน ~5 วินาที
 - [x] ระหว่าง `install.sh --with-plugin` ซ้ำ broker ไม่คืนกฎกลางคัน (มี `state/maintenance`) และหลังติดตั้งกฎยังใช้ plugin
-- [ ] Recovery Mode: ลบ plugin + ย้าย `auth.db` → บูตแล้วล็อกอินได้ และกฎกลับเป็นค่าเริ่มต้น
+- [x] Recovery Mode: ย้าย `auth.db` (+ `-wal`/`-shm`) แล้วลบ plugin → บูตแล้วล็อกอินได้ และกฎกลับเป็นค่าเริ่มต้น
 - [x] หลัง `uninstall.sh` กฎ `system.login.screensaver` ตรงกับ `backup/original` ทุกตัวอักษร (ยกเว้นวันที่แก้ไข)
-- [ ] หลัง `uninstall.sh` ไม่มีไฟล์ใน `/Library/Application Support/FaceID` ยกเว้น `backup/` และไม่มีข้อมูลใบหน้าใน keychain
+- [x] หลัง `uninstall.sh` ไม่มีไฟล์ใน `/Library/Application Support/FaceID` ยกเว้น `backup/` และไม่มีข้อมูลใบหน้าใน keychain (keychain: ยังต้องตรวจบนเครื่องหลัก)
