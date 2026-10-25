@@ -93,6 +93,17 @@ authd `Succeeded authorizing right 'system.login.screensaver'`
 macOS แทน mechanism ที่หา plugin ไม่เจอด้วย `builtin:no-op` (สำเร็จเสมอ) right `com.example.faceid.face` เป็น
 `evaluate-mechanisms` ที่มี mechanism เดียว จึงผ่าน และเพราะกฎเป็น k-of-n = 1 หน้าจอจึงปลดล็อก
 **ขัดกับ CLAUDE.md §7 ข้อ 6 (fail closed)** — ต้องแก้แบบของ right ก่อนใช้ plugin นอก VM
+ลองแก้แล้ว (2026-10-25, ผ่าน install.sh ใน VM) — **ไม่มีแบบไหนแก้ได้**:
+
+| แบบที่ลอง | bundle หาย | binary เสีย |
+|---|---|---|
+| `evaluate-mechanisms` (แบบเดิม) | ❌ ปลดล็อก (`builtin:no-op`) | ❌ ปลดล็อก (`requires unsupported architecture`) |
+| `class user` + `authenticate-user` + `session-owner` | ❌ ปลดล็อก — loginwindow ใส่ตัวตนเจ้าของ session ใน context ให้แล้ว authd จึงได้ credential โดย plugin ไม่ต้องทำงาน | ไม่ได้ลอง |
+| mechanism แบบ `,privileged` (authorizationhost) | ❌ ปลดล็อก (`filepath not found`) | ไม่ได้ลอง |
+
+สรุป: macOS ถือว่า mechanism ของ plugin ที่โหลดไม่ได้ = สำเร็จ (น่าจะเพื่อกันผู้ใช้ถูกล็อกออก) right ที่ตัดสินด้วย plugin
+อย่างเดียวจึง fail closed ไม่ได้เมื่อ plugin โหลดไม่ขึ้น ต้องแก้ด้วยวิธีอื่น (ยังไม่ได้ตัดสินใจ)
+
 (ผู้ที่ลบ bundle ได้ต้องเป็น root อยู่แล้ว แต่การถอนการติดตั้งไม่ครบ, เครื่องมือล้างเครื่อง หรือทำ recovery ข้อ 3 ไม่ครบ จะทำให้หน้าล็อกไม่ป้องกันอะไรเลย)
 
 ## ขั้นตอน
