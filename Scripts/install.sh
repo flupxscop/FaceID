@@ -23,6 +23,8 @@ readonly DIST="$ROOT/dist"
 readonly SUPPORT="/Library/Application Support/FaceID"
 readonly BACKUP_DIR="$SUPPORT/backup"
 readonly STATE_DIR="$SUPPORT/state"
+# Present only while install.sh replaces the plugin (see PluginWatchdog.swift).
+readonly MAINTENANCE_MARKER="$STATE_DIR/maintenance"
 readonly AGENT_LABEL="com.example.faceid.agent"
 readonly LAUNCH_AGENT="/Library/LaunchAgents/$AGENT_LABEL.plist"
 readonly APP_DEST="/Applications/FaceID.app"
@@ -216,6 +218,7 @@ rollback() {
             rm -rf "$PLUGIN_DEST"
             rm -f "$STATE_DIR/plugin-installed"
         fi
+        rm -f "$MAINTENANCE_MARKER"
         warn "files may be partly installed; remove them with: sudo \"$SUPPORT/uninstall.sh\""
     fi
     exit $status
@@ -301,6 +304,9 @@ log "agent loaded for $user"
 # ---------------------------------------------------------------------------
 
 if $with_plugin; then
+    # The broker restores the original rule when the plugin is missing or invalid (it would fail
+    # open otherwise); this marker tells it the plugin is being replaced on purpose.
+    touch "$MAINTENANCE_MARKER"
     install -d -o root -g wheel -m 755 "$(dirname "$PLUGIN_DEST")"
     rm -rf "$PLUGIN_DEST"
     ditto "$DIST/$PLUGIN_NAME" "$PLUGIN_DEST"
@@ -317,6 +323,7 @@ if $with_plugin; then
     security authorizationdb write system.login.screensaver < "$PLUGIN_RULE"
     current_rule="$(security authorizationdb read system.login.screensaver 2>/dev/null)"
     [[ "$current_rule" == *"$FACE_RIGHT"* ]] || die "the screensaver rule did not take effect"
+    rm -f "$MAINTENANCE_MARKER"
     log "lock-screen plugin installed"
 fi
 

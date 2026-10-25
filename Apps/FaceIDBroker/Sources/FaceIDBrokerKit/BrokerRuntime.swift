@@ -47,6 +47,7 @@ public final class BrokerRuntime {
     private let authListener: NSXPCListener
     private let agentDelegate: BrokerListenerDelegate
     private let authDelegate: BrokerListenerDelegate
+    private let watchdog: PluginWatchdog
 
     public init(configuration: BrokerConfiguration) {
         self.configuration = configuration
@@ -56,11 +57,19 @@ public final class BrokerRuntime {
         authListener = NSXPCListener(machServiceName: FaceIDBrokerXPC.authServiceName)
         agentListener.delegate = agentDelegate
         authListener.delegate = authDelegate
+        watchdog = PluginWatchdog(
+            health: SignedPluginHealth(),
+            rule: AuthorizationRuleInspector(),
+            restorer: UninstallScriptRestorer()
+        )
     }
 
     /// Starts listening and never returns.
     public func run() -> Never {
         ProcessHardening.apply()
+        // Before anything else, and even if the listeners stay off: a broken plugin must not
+        // leave the lock screen open.
+        watchdog.start()
         if configuration.agentCertificateSHA1 == nil {
             BrokerLog.xpc.error("no valid pins file; no agent can register")
         }

@@ -30,6 +30,7 @@ sudo ls "/Library/Application Support/FaceID/backup/original"
 | อยากปิด FaceID ทันที | Menu Bar › ปิด "ใช้ใบหน้าปลดล็อก" |
 | ไฟกล้องติดค้าง | หยุด agent (ข้อ 4) |
 | หน้าล็อกไม่มีช่องรหัสผ่าน / ใส่รหัสถูกแล้วไม่ผ่าน | ข้อ 1 → 2 → 3 ตามลำดับ |
+| หน้าล็อกปลดล็อกโดยไม่ถามรหัสผ่าน | plugin หายหรือเสีย broker ควรคืนกฎเองภายใน ~5 วินาที ถ้ายังเป็นอยู่ ทำข้อ 1 ทันที |
 
 ---
 
@@ -79,7 +80,17 @@ sudo "/Library/Application Support/FaceID/uninstall.sh"
 ls /Volumes
 ```
 
-4. ลบ plugin และ LaunchAgent (เปลี่ยนชื่อ volume ให้ตรงกับที่เห็น):
+4. **ทำขั้นนี้ก่อน**: ให้ macOS สร้างฐานข้อมูลกฎ authorization ใหม่จากค่าเริ่มต้นตอนบูตครั้งถัดไป (เปลี่ยนชื่อ volume ให้ตรงกับที่เห็น):
+
+```bash
+mv "/Volumes/Macintosh HD - Data/private/var/db/auth.db" "/Volumes/Macintosh HD - Data/private/var/db/auth.db.faceid-broken"
+```
+
+> ⚠️ ขั้นนี้รีเซ็ตกฎ authorization **ทุกข้อ** กลับเป็นค่าเริ่มต้น ถ้าเครื่องถูกจัดการด้วย MDM
+> หรือมีโปรแกรมอื่นแก้กฎไว้ จะต้องตั้งค่าของโปรแกรมนั้นใหม่
+> ⚠️ วิธีนี้ต้อง**ทดสอบใน VM ก่อน** (อยู่ในรายการทดสอบด้านล่าง)
+
+5. แล้วค่อยลบ plugin และ LaunchAgent:
 
 ```bash
 rm -rf "/Volumes/Macintosh HD - Data/Library/Security/SecurityAgentPlugins/FaceIDAuthPlugin.bundle"
@@ -89,15 +100,8 @@ rm -rf "/Volumes/Macintosh HD - Data/Library/Security/SecurityAgentPlugins/FaceI
 rm -f "/Volumes/Macintosh HD - Data/Library/LaunchAgents/com.example.faceid.agent.plist"
 ```
 
-5. ให้ macOS สร้างฐานข้อมูลกฎ authorization ใหม่จากค่าเริ่มต้นตอนบูตครั้งถัดไป:
-
-```bash
-mv "/Volumes/Macintosh HD - Data/private/var/db/auth.db" "/Volumes/Macintosh HD - Data/private/var/db/auth.db.faceid-broken"
-```
-
-> ⚠️ ขั้นนี้รีเซ็ตกฎ authorization **ทุกข้อ** กลับเป็นค่าเริ่มต้น ถ้าเครื่องถูกจัดการด้วย MDM
-> หรือมีโปรแกรมอื่นแก้กฎไว้ จะต้องตั้งค่าของโปรแกรมนั้นใหม่
-> ⚠️ วิธีนี้ต้อง**ทดสอบใน VM ก่อน** (อยู่ในรายการทดสอบด้านล่าง)
+> ⛔ **ห้ามลบ plugin โดยไม่คืนค่ากฎ** (ห้ามหยุดหลังขั้น 5 โดยไม่ได้ทำขั้น 4): macOS ถือว่า plugin ที่หายไป = ผ่าน
+> หน้าล็อกจะปลดล็อกโดยไม่ถามรหัสผ่าน ปกติ broker จะคืนกฎให้เอง แต่ใน Recovery Mode broker ไม่ได้ทำงาน
 
 6. รีสตาร์ท ล็อกอินด้วยรหัสผ่าน แล้วรัน `uninstall.sh` เพื่อลบส่วนที่เหลือ
 
@@ -154,7 +158,9 @@ security delete-generic-password -s com.example.faceid -a template-key.secure-en
 
 - [ ] `uninstall.sh --restore-authdb-only` ผ่าน SSH แล้วปลดล็อกด้วยรหัสผ่านได้
 - [ ] หยุด agent แล้วล็อกหน้าจอ → ปลดล็อกด้วยรหัสผ่านได้
-- [ ] ลบ plugin bundle ทิ้งโดยไม่คืนค่ากฎ → รีสตาร์ท → ล็อกอินได้ → `uninstall.sh` คืนค่าได้
+- [ ] ลบ plugin bundle ทิ้งโดยไม่คืนค่ากฎ → ภายใน ~5 วินาที broker คืนกฎเดิมเอง (log `restoring the original rule`) → ล็อกหน้าจอแล้วต้องถามรหัสผ่าน
+- [ ] ทำ binary ของ plugin เสีย (bundle ยังอยู่) → broker คืนกฎเดิมเองภายใน ~5 วินาที
+- [ ] ระหว่าง `install.sh --with-plugin` ซ้ำ broker ไม่คืนกฎกลางคัน (มี `state/maintenance`) และหลังติดตั้งกฎยังใช้ plugin
 - [ ] Recovery Mode: ลบ plugin + ย้าย `auth.db` → บูตแล้วล็อกอินได้ และกฎกลับเป็นค่าเริ่มต้น
 - [ ] หลัง `uninstall.sh` กฎ `system.login.screensaver` ตรงกับ `backup/original` ทุกตัวอักษร (ยกเว้นวันที่แก้ไข)
 - [ ] หลัง `uninstall.sh` ไม่มีไฟล์ใน `/Library/Application Support/FaceID` ยกเว้น `backup/` และไม่มีข้อมูลใบหน้าใน keychain

@@ -78,6 +78,7 @@
 - ทุกฝั่งตรวจ code signature: broker sign แบบ **ad-hoc** และถูกตรวจด้วย identifier + **cdhash** (ภายใน SecurityAgentHelper
   ตรวจใบรับรองที่ไม่ใช่ของ Apple ไม่ได้ — ยืนยันใน VM) ส่วน broker ตรวจ agent ด้วยใบรับรอง, รับ plugin เฉพาะ host ของ Apple
 - ค่าที่ต้องตรวจอยู่ใน `/Library/Application Support/FaceID/pins.plist` (เขียนโดย install.sh, root เท่านั้นแก้ได้)
+- broker เฝ้า plugin bundle (ทุก 5 วินาที และเมื่อโฟลเดอร์ plugin เปลี่ยน) ถ้าเสียขณะที่กฎยังใช้อยู่ จะคืนกฎเดิมทันที (§7 ข้อ 7)
 - agent เปิดให้ broker เรียกได้แค่ `FaceIDUnlockServiceProtocol` (สแกน/ยกเลิก) — enrollment/ลบ ทำได้จากแอปเท่านั้น
 - ห้ามใช้ private API ของ Apple เพื่อข้ามขอบเขตผู้ใช้
 
@@ -195,6 +196,10 @@ enum FaceIDConfig {
 5. XPC listener ต้องตรวจ code signature ของผู้เรียก (`setCodeSigningRequirement`) ทุกครั้ง
 6. Plugin ต้อง **fail closed เข้าโหมดรหัสผ่าน** — error/timeout/crash ใด ๆ = แสดงช่องรหัสผ่าน ไม่ใช่ allow
 7. ห้ามแก้ `authorizationdb` นอก `install.sh` / `uninstall.sh` และต้อง backup ก่อนทุกครั้ง
+   - **ข้อยกเว้นเดียว:** `FaceIDBroker` เรียก `uninstall.sh --restore-authdb-only` เองเมื่อ plugin หาย ลายเซ็นเสีย
+     หรือไม่มีสถาปัตยกรรมของเครื่อง ขณะที่ `system.login.screensaver` ยังชี้ไปที่ plugin — macOS ถือว่า plugin ที่โหลดไม่ได้
+     = ผ่าน (`builtin:no-op`) หน้าล็อกจึงจะปลดล็อกโดยไม่ถามรหัสผ่าน (ยืนยันใน VM 2026-10-25) broker **คืนค่าจาก backup เท่านั้น
+     ห้ามเขียนกฎใหม่** และหยุดรอระหว่างที่ `install.sh` กำลังเปลี่ยน plugin (`state/maintenance`) ดู `PluginWatchdog.swift`
 8. ห้ามแนะนำให้ปิด SIP, Gatekeeper หรือ TCC
 9. ผู้ใช้ต้องปิดฟีเจอร์ได้ในคลิกเดียวจาก Menu Bar
 
